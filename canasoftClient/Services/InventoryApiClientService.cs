@@ -36,4 +36,10 @@ public class InventoryApiClientService : IInventoryApiClient
             Console.WriteLine(await response.Content.ReadAsStringAsync());
         }
     }
+
+    public async Task GetAllItemAsync()
+    {
+        var response = await _client.GetAsync("api/InventoryItems");
+        Console.WriteLine(response.Content);
+    }
 }
