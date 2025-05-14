@@ -1,19 +1,37 @@
 ﻿
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Configuration;
 using CanasoftClient.Abstractions;
 using CanasoftClient.Services;
 
 using IHost host = Host.CreateDefaultBuilder(args)
-    .ConfigureServices((_, services) =>
+    .ConfigureAppConfiguration((hostingContext, config) =>
         {
+            config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+            config.AddEnvironmentVariables(); 
+        })
+
+    .ConfigureServices((hostContext, services) =>
+        {
+            var configuration = hostContext.Configuration;
+
             services.AddHttpClient<IInventoryApiClient, InventoryApiClientService>(client =>
             {
-                //client.BaseAddress = new Uri("https://myapp.local/");
-                client.BaseAddress = new Uri("http://localhost:5700/");
+                var baseAddress = configuration.GetValue<string>("InventoryApi:BaseAddress")
+                                    ?? configuration.GetSection("InventoryApi").GetValue<string>("BaseAddress")
+                                    ?? Environment.GetEnvironmentVariable("INVENTORY_API_BASE_ADDRESS")
+                                    ?? string.Empty;
+                client.BaseAddress = new Uri(baseAddress);
+
+                var apiKey = configuration.GetValue<string>("InventoryApi:ApiKey")
+                                ?? configuration.GetSection("InventoryApi").GetValue<string>("ApiKey")
+                                ?? Environment.GetEnvironmentVariable("INVENTORY_API_KEY")
+                                ?? string.Empty;
+
                 client.DefaultRequestHeaders.Add(
                     "X-Api-Key",
-                    "eyJDb21wYW55Q29kZSI6IkNPMDAxIiwiRXhwaXJlcyI6IjIwMjYtMDUtMTRUMDY6NDM6NTUuODkxMDg1N1oiLCJIYXNoIjoieU5qQWkvQzZLb0lqZVQ2cVJlV2k5aGI5MVdGU0RFUk44aVBySElFSmZsWT0ifQ=="
+                    apiKey
                 );
             
             })
