@@ -1,0 +1,7 @@
+ItemId,ItemName,WarehouseId,WarehouseName,Quantity,GroupItemId,GroupItemName,ItemCode
+ITEM001,Monitor 27 Inch,WH001,Main Warehouse,15,GROUP001,Electronics,MON27
+ITEM002,Mechanical Keyboard,WH001,Main Warehouse,30,GROUP001,Electronics,KBD-MECH
+ITEM003,Wireless Mouse,WH001,Main Warehouse,50,GROUP001,Electronics,MSE-WLS
+ITEM004,Laptop Stand,WH002,Secondary Warehouse,20,GROUP002,Accessories,LST-001
+ITEM005,USB-C Hub,WH002,Secondary Warehouse,25,GROUP002,Accessories,USB-HUB
+ITEM006,HDMI Cable,WH003,Overflow Warehouse,40,GROUP003,Cables,HDMI-2M

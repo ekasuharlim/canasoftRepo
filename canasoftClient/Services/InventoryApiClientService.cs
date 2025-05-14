@@ -13,18 +13,10 @@ public class InventoryApiClientService : IInventoryApiClient
         _client = client;
     }
 
-    public async Task CreateItemAsync()
+    public async Task CreateItemAsync(CreateInventoryItemRequest request)
     {
-        var item = new CreateInventoryItemRequest
-        {
-            Id = "IT005",
-            WarehouseId = "GD001",
-            Name = "Example Item",
-            Quantity = 10,
-            ItemGroupName = "Item group 1"
-        };
 
-        var response = await _client.PostAsJsonAsync("api/InventoryItems", item);
+        var response = await _client.PostAsJsonAsync("api/integration/inventory", request);
         if (response.IsSuccessStatusCode)
         {
             var result = await response.Content.ReadAsStringAsync();
