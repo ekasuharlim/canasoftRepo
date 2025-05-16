@@ -35,13 +35,10 @@ using IHost host = Host.CreateDefaultBuilder(args)
                 );
             
             })
-            .ConfigurePrimaryHttpMessageHandler( () => {
-                var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+            .ConfigurePrimaryHttpMessageHandler(() => {
                 var handler = new HttpClientHandler();
-                if (env != null && env.Equals("development", StringComparison.InvariantCultureIgnoreCase)) {
-                    handler.ServerCertificateCustomValidationCallback =
-                        HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
-                }
+                handler.ServerCertificateCustomValidationCallback = 
+                    (sender, cert, chain, sslPolicyErrors) => true;
                 return handler;
             });
 
@@ -67,6 +64,17 @@ foreach (var item in items)
     catch (Exception ex)
     {
         Console.WriteLine($"❌ Error on {item.ItemId}: {ex.Message}");
+        PrintInnerExceptions(ex);
     }
 }
 
+void PrintInnerExceptions(Exception ex, int level = 0)
+{
+    var indent = new string(' ', level * 4);
+    Console.WriteLine($"{indent}Exception: {ex.Message}");
+    
+    if (ex.InnerException != null)
+    {
+        PrintInnerExceptions(ex.InnerException, level + 1);
+    }
+}
