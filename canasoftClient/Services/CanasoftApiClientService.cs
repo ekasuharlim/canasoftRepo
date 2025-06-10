@@ -4,16 +4,16 @@ using CanasoftClient.Contracts.Request;
 
 namespace CanasoftClient.Services;
 
-public class InventoryApiClientService : IInventoryApiClient
+public class CanasoftApiClientService : IInventoryApiClient, ISalesItemApiClient
 {
     private readonly HttpClient _client;
 
-    public InventoryApiClientService(HttpClient client)
+    public CanasoftApiClientService(HttpClient client)
     {
         _client = client;
     }
 
-    public async Task CreateItemAsync(CreateInventoryItemRequest request)
+    public async Task CreateInventoryItemAsync(CreateInventoryItemRequest request)
     {
 
         var response = await _client.PostAsJsonAsync("api/integration/inventory", request);
@@ -29,9 +29,26 @@ public class InventoryApiClientService : IInventoryApiClient
         }
     }
 
-    public async Task GetAllItemAsync()
+
+    public async Task GetAllInventoryItemAsync()
     {
         var response = await _client.GetAsync("api/InventoryItems");
         Console.WriteLine(response.Content);
     }
+
+    public async Task CreateSalesItemAsync(CreateSalesItemRequest request)
+    {
+        var response = await _client.PostAsJsonAsync("api/integration/sales", request);
+        if (response.IsSuccessStatusCode)
+        {
+            var result = await response.Content.ReadAsStringAsync();
+            Console.WriteLine("Item created:\n" + result);
+        }
+        else
+        {
+            Console.WriteLine($"Failed to create item: {response.StatusCode}");
+            Console.WriteLine(await response.Content.ReadAsStringAsync());
+        }
+    }
+
 }

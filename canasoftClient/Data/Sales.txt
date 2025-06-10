@@ -1,0 +1,7 @@
+SalesDate,ItemId,ItemName,ItemCode,GroupItemId,GroupItemName,WarehouseId,WarehouseName,SalesName,Quantity,SubTotal
+2025-06-10,ITEM001,Monitor 27 Inch,MON27,GROUP001,Electronics,WH001,Main Warehouse,Alice,2,700.00
+2025-06-10,ITEM002,Mechanical Keyboard,KBD-MECH,GROUP001,Electronics,WH001,Main Warehouse,Bob,3,450.00
+2025-06-10,ITEM003,Wireless Mouse,MSE-WLS,GROUP001,Electronics,WH001,Main Warehouse,Charlie,5,250.00
+2025-06-10,ITEM004,Laptop Stand,LST-001,GROUP002,Accessories,WH002,Secondary Warehouse,Diana,1,100.00
+2025-06-10,ITEM005,USB-C Hub,USB-HUB,GROUP002,Accessories,WH002,Secondary Warehouse,Evan,2,120.00
+2025-06-10,ITEM006,HDMI Cable,HDMI-2M,GROUP003,Cables,WH003,Overflow Warehouse,Faith,4,80.00

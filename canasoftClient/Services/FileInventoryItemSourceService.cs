@@ -2,7 +2,7 @@ using CanasoftClient.Abstractions;
 using CanasoftClient.Contracts.Request;
 
 namespace CanasoftClient.Services;
-public class FileInventoryItemSource : IInventoryItemSource
+public class FileInventoryItemSource : IItemSource<CreateInventoryItemRequest>
 {
     private readonly string _filePath;
 
@@ -25,7 +25,7 @@ public class FileInventoryItemSource : IInventoryItemSource
 
             items.Add(new CreateInventoryItemRequest
             {
-                CompanyCode = "CO001",
+                CompanyCode = "CN001",
                 ItemId = parts[0],
                 ItemName = parts[1],
                 WarehouseId = parts[2],

@@ -4,7 +4,7 @@ namespace CanasoftClient.Abstractions;
 
 public interface IInventoryApiClient
 {
-    Task CreateItemAsync(CreateInventoryItemRequest request);
-    Task GetAllItemAsync();
+    Task CreateInventoryItemAsync(CreateInventoryItemRequest request);
+    Task GetAllInventoryItemAsync();
 }
 
