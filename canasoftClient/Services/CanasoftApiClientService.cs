@@ -1,16 +1,19 @@
 using System.Net.Http.Json;
 using CanasoftClient.Abstractions;
 using CanasoftClient.Contracts.Request;
+using Microsoft.Extensions.Logging;
 
 namespace CanasoftClient.Services;
 
 public class CanasoftApiClientService : IInventoryApiClient, ISalesItemApiClient
 {
     private readonly HttpClient _client;
+    private readonly ILogger<CanasoftApiClientService> _logger;
 
-    public CanasoftApiClientService(HttpClient client)
+    public CanasoftApiClientService(HttpClient client, ILogger<CanasoftApiClientService> logger)
     {
         _client = client;
+        _logger = logger;
     }
 
     public async Task CreateInventoryItemAsync(CreateInventoryItemRequest request)
@@ -20,12 +23,12 @@ public class CanasoftApiClientService : IInventoryApiClient, ISalesItemApiClient
         if (response.IsSuccessStatusCode)
         {
             var result = await response.Content.ReadAsStringAsync();
-            Console.WriteLine("Item created:\n" + result);
+            _logger.LogInformation("Item created: {Result}", result);
         }
         else
         {
-            Console.WriteLine($"Failed to create item: {response.StatusCode}");
-            Console.WriteLine(await response.Content.ReadAsStringAsync());
+            var errorContent = await response.Content.ReadAsStringAsync();
+            _logger.LogError("Failed to create item: {StatusCode}. Response: {ErrorContent}", response.StatusCode, errorContent);
         }
     }
 
@@ -33,7 +36,7 @@ public class CanasoftApiClientService : IInventoryApiClient, ISalesItemApiClient
     public async Task GetAllInventoryItemAsync()
     {
         var response = await _client.GetAsync("api/InventoryItems");
-        Console.WriteLine(response.Content);
+        _logger.LogInformation("{Content}", response.Content);
     }
 
     public async Task CreateSalesItemAsync(CreateSalesItemRequest request)
@@ -42,12 +45,12 @@ public class CanasoftApiClientService : IInventoryApiClient, ISalesItemApiClient
         if (response.IsSuccessStatusCode)
         {
             var result = await response.Content.ReadAsStringAsync();
-            Console.WriteLine("Item created:\n" + result);
+            _logger.LogInformation("Item created: {Result}", result);
         }
         else
         {
-            Console.WriteLine($"Failed to create item: {response.StatusCode}");
-            Console.WriteLine(await response.Content.ReadAsStringAsync());
+            var errorContent = await response.Content.ReadAsStringAsync();
+            _logger.LogError("Failed to create item: {StatusCode}. Response: {ErrorContent}", response.StatusCode, errorContent);
         }
     }
 

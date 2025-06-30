@@ -5,6 +5,8 @@ using Microsoft.Extensions.Configuration;
 using CanasoftClient.Abstractions;
 using CanasoftClient.Services;
 using CanasoftClient.Contracts.Request;
+using Microsoft.Extensions.Logging;
+using Serilog;
 
 using IHost host = Host.CreateDefaultBuilder(args)
     .ConfigureAppConfiguration((hostingContext, config) =>
@@ -12,6 +14,9 @@ using IHost host = Host.CreateDefaultBuilder(args)
             config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
             config.AddEnvironmentVariables();
         })
+
+    .UseSerilog((hostingContext, loggerConfiguration) => loggerConfiguration
+        .ReadFrom.Configuration(hostingContext.Configuration))
 
 
     .ConfigureServices((hostContext, services) =>
@@ -52,13 +57,13 @@ using IHost host = Host.CreateDefaultBuilder(args)
             
             services.AddSingleton<IItemSource<CreateInventoryItemRequest>, FileInventoryItemSource>(
                 sp =>
-                new FileInventoryItemSource("Data/Inventory.txt")
-            );
+                new FileInventoryItemSource("Data/Inventory.txt", sp.GetRequiredService<ILogger<FileInventoryItemSource>>()))
+            ;
             
-            services.AddSingleton<IItemSource<CreateSalesItemRequest>, FileSalesItemItemSource>(
+            services.AddSingleton<IItemSource<CreateSalesItemRequest>, FileSalesItemSourceService>(
                 sp =>
-                new FileSalesItemItemSource("Data/Sales.txt")
-            );
+                new FileSalesItemSourceService("Data/Sales.txt", sp.GetRequiredService<ILogger<FileSalesItemSourceService>>()))
+            ;
 
         }
     )
@@ -68,33 +73,33 @@ var inventoryApiClient = host.Services.GetRequiredService<IInventoryApiClient>()
 var inventoryItemSource = host.Services.GetRequiredService<IItemSource<CreateInventoryItemRequest>>();
 var salesItemApiClient = host.Services.GetRequiredService<ISalesItemApiClient>();
 var salesItemSource = host.Services.GetRequiredService<IItemSource<CreateSalesItemRequest>>();
+var logger = host.Services.GetRequiredService<ILogger<Program>>();
 
-//await LoadInventoryItems(inventoryItemSource, inventoryApiClient);
+await LoadInventoryItems(inventoryItemSource, inventoryApiClient);
 await LoadSalesItems(salesItemSource, salesItemApiClient);
 
 async Task LoadSalesItems(IItemSource<CreateSalesItemRequest> itemSource, ISalesItemApiClient apiClient)
 {
-    Console.WriteLine("Loading Sales items...");
+    logger.LogInformation("Loading Sales items...");
     var items = await itemSource.LoadAsync();
     foreach (var item in items)
-    {
+    { 
         try
         {
             await apiClient.CreateSalesItemAsync(item);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error on {item.ItemId}: {ex.Message}");
-            PrintInnerExceptions(ex);
+            logger.LogError(ex, "Error on {ItemId}: {ErrorMessage}", item.ItemId, ex.Message);
         }
     }    
-    Console.WriteLine($"Loaded {items.Count()} items.");
+    logger.LogInformation("Loaded {ItemCount} items.", items.Count());
 }
 
 
 async Task LoadInventoryItems(IItemSource<CreateInventoryItemRequest> itemSource, IInventoryApiClient apiClient)
 {
-    Console.WriteLine("Loading inventory items...");
+    logger.LogInformation("Loading inventory items...");
     var items = await itemSource.LoadAsync();
     foreach (var item in items)
     {
@@ -104,22 +109,9 @@ async Task LoadInventoryItems(IItemSource<CreateInventoryItemRequest> itemSource
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error on {item.ItemId}: {ex.Message}");
-            PrintInnerExceptions(ex);
+            logger.LogError(ex, "Error on {ItemId}: {ErrorMessage}", item.ItemId, ex.Message);
         }
     }
-    Console.WriteLine($"Loaded {items.Count()} items.");
-}
-
-
-void PrintInnerExceptions(Exception ex, int level = 0)
-{
-    var indent = new string(' ', level * 4);
-    Console.WriteLine($"{indent}Exception: {ex.Message}");
-    
-    if (ex.InnerException != null)
-    {
-        PrintInnerExceptions(ex.InnerException, level + 1);
-    }
+    logger.LogInformation("Loaded {ItemCount} items.", items.Count());
 }
 

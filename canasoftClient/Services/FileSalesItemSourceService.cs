@@ -1,19 +1,23 @@
 using System.Globalization;
 using CanasoftClient.Abstractions;
 using CanasoftClient.Contracts.Request;
+using Microsoft.Extensions.Logging;
 
 namespace CanasoftClient.Services;
-public class FileSalesItemItemSource : IItemSource<CreateSalesItemRequest>
+public class FileSalesItemSourceService : IItemSource<CreateSalesItemRequest>
 {
     private readonly string _filePath;
+    private readonly ILogger<FileSalesItemSourceService> _logger;
 
-    public FileSalesItemItemSource(string filePath)
+    public FileSalesItemSourceService(string filePath, ILogger<FileSalesItemSourceService> logger)
     {
         _filePath = filePath;
+        _logger = logger;
     }
 
     public async Task<IEnumerable<CreateSalesItemRequest>> LoadAsync()
     {
+        _logger.LogInformation("Loading sales items from {FilePath}", _filePath);
         var lines = await File.ReadAllLinesAsync(_filePath);
         var salesItems = new List<CreateSalesItemRequest>();
 
@@ -22,16 +26,30 @@ public class FileSalesItemItemSource : IItemSource<CreateSalesItemRequest>
             var parts = line.Split(',');
 
             if (parts.Length < 11)
-                    continue;
+            {
+                _logger.LogWarning("Skipping malformed sales line: {Line}", line);
+                continue;
+            }
 
+            try
+            {
                 if (!DateTime.TryParse(parts[0], out var salesDate))
+                {
+                    _logger.LogWarning("Skipping sales line due to invalid SalesDate: {Line}", line);
                     continue;
+                }
 
                 if (!decimal.TryParse(parts[9], NumberStyles.Number, CultureInfo.InvariantCulture, out var quantity))
+                {
+                    _logger.LogWarning("Skipping sales line due to invalid Quantity: {Line}", line);
                     continue;
+                }
 
                 if (!decimal.TryParse(parts[10], NumberStyles.Number, CultureInfo.InvariantCulture, out var subTotal))
+                {
+                    _logger.LogWarning("Skipping sales line due to invalid SubTotal: {Line}", line);
                     continue;
+                }
 
                 var salesItem = new CreateSalesItemRequest
                 {
@@ -50,8 +68,13 @@ public class FileSalesItemItemSource : IItemSource<CreateSalesItemRequest>
                 };
 
                 salesItems.Add(salesItem);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error parsing sales item from line: {Line}", line);
+            }
         }
-
+        _logger.LogInformation("Successfully loaded {ItemCount} sales items from {FilePath}", salesItems.Count, _filePath);
         return salesItems;  
     }
 
