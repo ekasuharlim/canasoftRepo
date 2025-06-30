@@ -22,8 +22,9 @@ using IHost host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((hostContext, services) =>
         {
             var configuration = hostContext.Configuration;
+
         
-            services.AddHttpClient<CanasoftApiClientService>(client =>
+            services.AddHttpClient("CanasoftClient", (sp, client) =>
             {
 
                 var baseAddress = configuration.GetValue<string>("CanasoftApi:BaseAddress")
@@ -52,8 +53,11 @@ using IHost host = Host.CreateDefaultBuilder(args)
                 return handler;
             });
 
-            services.AddScoped<IInventoryApiClient>(sp => sp.GetRequiredService<CanasoftApiClientService>());
-            services.AddScoped<ISalesItemApiClient>(sp => sp.GetRequiredService<CanasoftApiClientService>());
+            services.AddHttpClient<SalesApiClientService>("CanasoftClient");
+            services.AddHttpClient<InventoryApiClientService>("CanasoftClient");
+
+            services.AddScoped<IItemApiClient<CreateInventoryItemRequest>>(sp => sp.GetRequiredService<InventoryApiClientService>());
+            services.AddScoped<IItemApiClient<CreateSalesItemRequest>>(sp => sp.GetRequiredService<SalesApiClientService>());
             
             services.AddSingleton<IItemSource<CreateInventoryItemRequest>, FileInventoryItemSource>(
                 sp =>
@@ -69,49 +73,40 @@ using IHost host = Host.CreateDefaultBuilder(args)
     )
     .Build();
 
-var inventoryApiClient = host.Services.GetRequiredService<IInventoryApiClient>();
+
+var salesItemApiClient = host.Services.GetRequiredService<IItemApiClient<CreateSalesItemRequest>>();
+var inventoryApiClient = host.Services.GetRequiredService<IItemApiClient<CreateInventoryItemRequest>>();
+
 var inventoryItemSource = host.Services.GetRequiredService<IItemSource<CreateInventoryItemRequest>>();
-var salesItemApiClient = host.Services.GetRequiredService<ISalesItemApiClient>();
 var salesItemSource = host.Services.GetRequiredService<IItemSource<CreateSalesItemRequest>>();
 var logger = host.Services.GetRequiredService<ILogger<Program>>();
 
-await LoadInventoryItems(inventoryItemSource, inventoryApiClient);
-await LoadSalesItems(salesItemSource, salesItemApiClient);
 
-async Task LoadSalesItems(IItemSource<CreateSalesItemRequest> itemSource, ISalesItemApiClient apiClient)
+
+async Task LoadItems<TRequest>(
+    IItemSource<TRequest> itemSource,
+    IItemApiClient<TRequest> apiClient,
+    string itemTypeName)
 {
-    logger.LogInformation("Loading Sales items...");
-    var items = await itemSource.LoadAsync();
-    foreach (var item in items)
-    { 
-        try
-        {
-            await apiClient.CreateSalesItemAsync(item);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error on {ItemId}: {ErrorMessage}", item.ItemId, ex.Message);
-        }
-    }    
-    logger.LogInformation("Loaded {ItemCount} items.", items.Count());
-}
-
-
-async Task LoadInventoryItems(IItemSource<CreateInventoryItemRequest> itemSource, IInventoryApiClient apiClient)
-{
-    logger.LogInformation("Loading inventory items...");
+    logger.LogInformation("Loading {ItemTypeName} items...", itemTypeName);
     var items = await itemSource.LoadAsync();
     foreach (var item in items)
     {
         try
         {
-            await apiClient.CreateInventoryItemAsync(item);
+
+            await apiClient.CreateItemAsync(item);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error on {ItemId}: {ErrorMessage}", item.ItemId, ex.Message);
+            logger.LogError(ex, "Error on  loading {itemTypeName} item: {Item}", itemTypeName, item);
         }
     }
-    logger.LogInformation("Loaded {ItemCount} items.", items.Count());
+    logger.LogInformation("Loaded {ItemCount} {ItemTypeName} items.", items.Count(), itemTypeName);
 }
+
+await LoadItems<CreateInventoryItemRequest>(inventoryItemSource, inventoryApiClient, "Inventory");
+await LoadItems<CreateSalesItemRequest>(salesItemSource, salesItemApiClient, "Sales");
+
+
 

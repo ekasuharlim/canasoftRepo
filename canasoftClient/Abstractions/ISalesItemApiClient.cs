@@ -2,8 +2,7 @@ using CanasoftClient.Contracts.Request;
 
 namespace CanasoftClient.Abstractions;
 
-public interface ISalesItemApiClient
+public interface ISalesItemApiClient : IItemApiClient<CreateSalesItemRequest>
 {
-    Task CreateSalesItemAsync(CreateSalesItemRequest request);
 }
 
