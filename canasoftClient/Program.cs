@@ -7,6 +7,8 @@ using CanasoftClient.Services;
 using CanasoftClient.Contracts.Request;
 using Microsoft.Extensions.Logging;
 using Serilog;
+using CanasoftClient.Mappings;
+using System.IO;
 
 using IHost host = Host.CreateDefaultBuilder(args)
     .ConfigureAppConfiguration((hostingContext, config) =>
@@ -59,54 +61,70 @@ using IHost host = Host.CreateDefaultBuilder(args)
             services.AddScoped<IItemApiClient<CreateInventoryItemRequest>>(sp => sp.GetRequiredService<InventoryApiClientService>());
             services.AddScoped<IItemApiClient<CreateSalesItemRequest>>(sp => sp.GetRequiredService<SalesApiClientService>());
             
-            services.AddSingleton<IItemSource<CreateInventoryItemRequest>, FileInventoryItemSource>(
-                sp =>
-                new FileInventoryItemSource("Data/Inventory.txt", sp.GetRequiredService<ILogger<FileInventoryItemSource>>()))
-            ;
-            
-            services.AddSingleton<IItemSource<CreateSalesItemRequest>, FileSalesItemSourceService>(
-                sp =>
-                new FileSalesItemSourceService("Data/Sales.txt", sp.GetRequiredService<ILogger<FileSalesItemSourceService>>()))
-            ;
+            services.AddSingleton<IItemSource<CreateInventoryItemRequest>, FileInventoryItemSource>();
+            services.AddSingleton<IItemSource<CreateSalesItemRequest>, FileSalesItemSourceService>();
+            services.AddSingleton<ItemSourceMapping>();
 
         }
     )
     .Build();
 
 
-var salesItemApiClient = host.Services.GetRequiredService<IItemApiClient<CreateSalesItemRequest>>();
-var inventoryApiClient = host.Services.GetRequiredService<IItemApiClient<CreateInventoryItemRequest>>();
-
-var inventoryItemSource = host.Services.GetRequiredService<IItemSource<CreateInventoryItemRequest>>();
-var salesItemSource = host.Services.GetRequiredService<IItemSource<CreateSalesItemRequest>>();
 var logger = host.Services.GetRequiredService<ILogger<Program>>();
+var itemSourceMapping = host.Services.GetRequiredService<ItemSourceMapping>();
 
+var inputDirectory = "Data/input";
+var processedDirectory = "Data/processed";
+var failedDirectory = "Data/failed";
 
+logger.LogInformation("Starting file processing...");
+foreach (var filePath in Directory.GetFiles(inputDirectory))
+{
+    var fileName = Path.GetFileName(filePath);
+    try
+    {
+        var (source, apiClient, typeName, requestType) = itemSourceMapping.GetServicesByFileName(fileName);
+        if (requestType == typeof(CreateInventoryItemRequest))
+        {
+            await LoadItems((IItemSource<CreateInventoryItemRequest>)source, (IItemApiClient<CreateInventoryItemRequest>)apiClient, typeName, filePath);
+        }
+        else if (requestType == typeof(CreateSalesItemRequest))
+        {
+            await LoadItems((IItemSource<CreateSalesItemRequest>)source, (IItemApiClient<CreateSalesItemRequest>)apiClient, typeName, filePath);
+        }
+        var timestamp = DateTime.Now.ToString("yyyyMMddHHmmssfff");
+        var newFileName = $"{Path.GetFileNameWithoutExtension(fileName)}_{timestamp}{Path.GetExtension(fileName)}";
+        File.Move(filePath, Path.Combine(processedDirectory, newFileName));
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Error processing file {FileName}", fileName);
+        //File.Move(filePath, Path.Combine(failedDirectory, fileName));
+    }
+}
+logger.LogInformation("File processing completed.");
 
 async Task LoadItems<TRequest>(
     IItemSource<TRequest> itemSource,
     IItemApiClient<TRequest> apiClient,
-    string itemTypeName)
+    string itemTypeName,
+    string filePath)
 {
-    logger.LogInformation("Loading {ItemTypeName} items...", itemTypeName);
-    var items = await itemSource.LoadAsync();
+    logger.LogInformation("Start sending to inventory API");
+    var items = await itemSource.LoadAsync(filePath);
     foreach (var item in items)
     {
         try
         {
-
             await apiClient.CreateItemAsync(item);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error on  loading {itemTypeName} item: {Item}", itemTypeName, item);
+            logger.LogError(ex, "Error on loading {itemTypeName} item: {Item}", itemTypeName, item);
         }
     }
-    logger.LogInformation("Loaded {ItemCount} {ItemTypeName} items.", items.Count(), itemTypeName);
+    logger.LogInformation("Loaded {ItemCount} {ItemTypeName} items from {FilePath}.", items.Count(), itemTypeName, filePath);
 }
-
-await LoadItems<CreateInventoryItemRequest>(inventoryItemSource, inventoryApiClient, "Inventory");
-await LoadItems<CreateSalesItemRequest>(salesItemSource, salesItemApiClient, "Sales");
 
 
 

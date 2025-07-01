@@ -5,24 +5,23 @@ using Microsoft.Extensions.Logging;
 namespace CanasoftClient.Services;
 public class FileInventoryItemSource : IItemSource<CreateInventoryItemRequest>
 {
-    private readonly string _filePath;
     private readonly ILogger<FileInventoryItemSource> _logger;
 
-    public FileInventoryItemSource(string filePath, ILogger<FileInventoryItemSource> logger)
+    public FileInventoryItemSource(ILogger<FileInventoryItemSource> logger)
     {
-        _filePath = filePath;
         _logger = logger;
     }
 
-    public async Task<IEnumerable<CreateInventoryItemRequest>> LoadAsync()
+    public async Task<IEnumerable<CreateInventoryItemRequest>> LoadAsync(string filePath)
     {
-        _logger.LogInformation("Loading inventory items from {FilePath}", _filePath);
-        var lines = await File.ReadAllLinesAsync(_filePath);
+        _logger.LogInformation("Loading inventory items Eka from {FilePath}", filePath);
+
+        var lines = await File.ReadAllLinesAsync(filePath);
         var items = new List<CreateInventoryItemRequest>();
 
         foreach (var line in lines.Skip(1)) 
         {
-            var parts = line.Split(',');
+            var parts = line.Split(';');
 
             if (parts.Length < 7)
             {
@@ -50,7 +49,7 @@ public class FileInventoryItemSource : IItemSource<CreateInventoryItemRequest>
                 _logger.LogError(ex, "Error parsing inventory item from line: {Line}", line);
             }
         }
-        _logger.LogInformation("Successfully loaded {ItemCount} inventory items from {FilePath}", items.Count, _filePath);
+        _logger.LogInformation("Successfully loaded {ItemCount} inventory items from {FilePath}", items.Count, filePath);
         return items;  
     }
 

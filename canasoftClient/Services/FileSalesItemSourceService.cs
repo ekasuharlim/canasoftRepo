@@ -6,19 +6,17 @@ using Microsoft.Extensions.Logging;
 namespace CanasoftClient.Services;
 public class FileSalesItemSourceService : IItemSource<CreateSalesItemRequest>
 {
-    private readonly string _filePath;
     private readonly ILogger<FileSalesItemSourceService> _logger;
 
-    public FileSalesItemSourceService(string filePath, ILogger<FileSalesItemSourceService> logger)
+    public FileSalesItemSourceService(ILogger<FileSalesItemSourceService> logger)
     {
-        _filePath = filePath;
         _logger = logger;
     }
 
-    public async Task<IEnumerable<CreateSalesItemRequest>> LoadAsync()
+    public async Task<IEnumerable<CreateSalesItemRequest>> LoadAsync(string filePath)
     {
-        _logger.LogInformation("Loading sales items from {FilePath}", _filePath);
-        var lines = await File.ReadAllLinesAsync(_filePath);
+        _logger.LogInformation("Loading sales aaaa items from {FilePath}", filePath);
+        var lines = await File.ReadAllLinesAsync(filePath);
         var salesItems = new List<CreateSalesItemRequest>();
 
         foreach (var line in lines.Skip(1)) 
@@ -74,7 +72,7 @@ public class FileSalesItemSourceService : IItemSource<CreateSalesItemRequest>
                 _logger.LogError(ex, "Error parsing sales item from line: {Line}", line);
             }
         }
-        _logger.LogInformation("Successfully loaded {ItemCount} sales items from {FilePath}", salesItems.Count, _filePath);
+        _logger.LogInformation("Successfully loaded {ItemCount} sales items from {FilePath}", salesItems.Count, filePath);
         return salesItems;  
     }
 
