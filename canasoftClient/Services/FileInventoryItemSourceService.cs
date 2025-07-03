@@ -6,9 +6,11 @@ namespace CanasoftClient.Services;
 public class FileInventoryItemSource : IItemSource<CreateInventoryItemRequest>
 {
     private readonly ILogger<FileInventoryItemSource> _logger;
+    private string _spliter;
 
-    public FileInventoryItemSource(ILogger<FileInventoryItemSource> logger)
+    public FileInventoryItemSource(ILogger<FileInventoryItemSource> logger, string spliter = ";")
     {
+        _spliter = spliter;
         _logger = logger;
     }
 
@@ -21,7 +23,7 @@ public class FileInventoryItemSource : IItemSource<CreateInventoryItemRequest>
 
         foreach (var line in lines.Skip(1)) 
         {
-            var parts = line.Split(';');
+            var parts = line.Split(_spliter);
 
             if (parts.Length < 7)
             {

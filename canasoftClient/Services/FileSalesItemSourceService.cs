@@ -7,10 +7,12 @@ namespace CanasoftClient.Services;
 public class FileSalesItemSourceService : IItemSource<CreateSalesItemRequest>
 {
     private readonly ILogger<FileSalesItemSourceService> _logger;
+    private string _spliter;
 
-    public FileSalesItemSourceService(ILogger<FileSalesItemSourceService> logger)
+    public FileSalesItemSourceService(ILogger<FileSalesItemSourceService> logger, string spliter = ";")
     {
         _logger = logger;
+        _spliter = spliter; 
     }
 
     public async Task<IEnumerable<CreateSalesItemRequest>> LoadAsync(string filePath)
@@ -21,7 +23,7 @@ public class FileSalesItemSourceService : IItemSource<CreateSalesItemRequest>
 
         foreach (var line in lines.Skip(1)) 
         {
-            var parts = line.Split(',');
+            var parts = line.Split(_spliter);
 
             if (parts.Length < 11)
             {
