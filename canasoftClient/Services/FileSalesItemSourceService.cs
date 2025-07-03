@@ -17,7 +17,7 @@ public class FileSalesItemSourceService : IItemSource<CreateSalesItemRequest>
 
     public async Task<IEnumerable<CreateSalesItemRequest>> LoadAsync(string filePath)
     {
-        _logger.LogInformation("Loading sales aaaa items from {FilePath}", filePath);
+        _logger.LogInformation("Loading sales items from {FilePath}", filePath);
         var lines = await File.ReadAllLinesAsync(filePath);
         var salesItems = new List<CreateSalesItemRequest>();
 

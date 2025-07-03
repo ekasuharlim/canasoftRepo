@@ -5,7 +5,8 @@ using Microsoft.Extensions.Configuration;
 using CanasoftClient.Abstractions;
 using CanasoftClient.Services;
 using CanasoftClient.Contracts.Request;
-using CanasoftClient.Factories;
+using CanasoftClient.Processor;
+using CanasoftClient.Config;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using System.IO;
@@ -25,6 +26,8 @@ using IHost host = Host.CreateDefaultBuilder(args)
         {
             var configuration = hostContext.Configuration;
 
+            services.Configure<FileMappingConfig>("Inventory", configuration.GetSection("FileMappings:Inventory"));
+            services.Configure<FileMappingConfig>("Sales", configuration.GetSection("FileMappings:Sales"));
 
             services.AddHttpClient("CanasoftClient", (sp, client) =>
             {
@@ -58,6 +61,7 @@ using IHost host = Host.CreateDefaultBuilder(args)
             services.AddHttpClient<InventoryApiClientService>("CanasoftClient");
             services.AddHttpClient<SalesApiClientService>("CanasoftClient");
 
+
             services.AddScoped<IItemApiClient<CreateInventoryItemRequest>>(sp => sp.GetRequiredService<InventoryApiClientService>());
             services.AddScoped<IItemApiClient<CreateSalesItemRequest>>(sp => sp.GetRequiredService<SalesApiClientService>());
 
@@ -77,7 +81,10 @@ using IHost host = Host.CreateDefaultBuilder(args)
                 return new FileSalesItemSourceService(logger, spliter);
             });
 
+            services.AddSingleton<IFileProcessor, InventoryFileProcessor>();
+            services.AddSingleton<IFileProcessor, SalesFileProcessor>();
             services.AddSingleton<FileProcessorFactory>();            
+
         }
     )
     .Build();
@@ -105,19 +112,8 @@ foreach (var filePath in Directory.GetFiles(inputDirectory))
             continue;
         }
 
+        await processor.ProcessAsync(filePath, logger);
 
-        var (source, apiClient, typeName) = processor.Value;
-        if (source is IItemSource<CreateInventoryItemRequest> inventorySource &&
-            apiClient is IItemApiClient<CreateInventoryItemRequest> inventoryApiClient)
-        {
-            await LoadItems(inventorySource, inventoryApiClient, typeName, filePath);
-        }
-        else if (source is IItemSource<CreateSalesItemRequest> salesSource &&
-                 apiClient is IItemApiClient<CreateSalesItemRequest> salesApiClient)
-        {
-            await LoadItems(salesSource, salesApiClient, typeName, filePath);
-        }
-        
         var timestamp = DateTime.Now.ToString("yyyyMMddHHmmssfff");
         var newFileName = $"{Path.GetFileNameWithoutExtension(fileName)}_{timestamp}{Path.GetExtension(fileName)}";
         File.Move(filePath, Path.Combine(processedDirectory, newFileName));
@@ -133,27 +129,6 @@ foreach (var filePath in Directory.GetFiles(inputDirectory))
 
 logger.LogInformation("File processing completed.");
 
-async Task LoadItems<TRequest>(
-    IItemSource<TRequest> itemSource,
-    IItemApiClient<TRequest> apiClient,
-    string itemTypeName,
-    string filePath)
-{
-    logger.LogInformation("Start sending to inventory API");
-    var items = await itemSource.LoadAsync(filePath);
-    foreach (var item in items)
-    {
-        try
-        {
-            await apiClient.CreateItemAsync(item);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error on loading {itemTypeName} item: {Item}", itemTypeName, item);
-        }
-    }
-    logger.LogInformation("Loaded {ItemCount} {ItemTypeName} items from {FilePath}.", items.Count(), itemTypeName, filePath);
-}
 
 
 
